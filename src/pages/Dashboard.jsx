@@ -14,7 +14,14 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const todayStr = () => format(new Date(), "yyyy-MM-dd");
+const todayStr = () => {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+};
 
 export default function Dashboard() {
   const [custodyDays, setCustodyDays] = useState([]);
@@ -92,7 +99,12 @@ export default function Dashboard() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold font-heading">Family Wall</h1>
         <p className="text-muted-foreground mt-1">
-          {format(new Date(), "EEEE, MMMM d")}
+          {new Intl.DateTimeFormat("en-US", {
+            timeZone: "America/Chicago",
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }).format(new Date())}
         </p>
       </div>
 
