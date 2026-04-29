@@ -23,6 +23,8 @@ const todayStr = () => {
   }).format(new Date());
 };
 
+console.log("📅 todayStr:", todayStr);
+
 export default function Dashboard() {
   const [custodyDays, setCustodyDays] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -37,6 +39,9 @@ export default function Dashboard() {
           id: doc.id,
           ...doc.data(),
         }));
+
+        console.log("🔥 Firebase data:", data);
+
         setCustodyDays(data);
       }
     );
