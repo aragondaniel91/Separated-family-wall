@@ -23,7 +23,14 @@ const todayStr = () => {
   }).format(new Date());
 };
 
-console.log("📅 todayStr:", todayStr);
+console.log("📅 todayStr:", todayStr());
+console.log("🔥 Firebase data:", data);
+console.log(
+  "🔍 comparing:",
+  data.map((d) => d.date),
+  "vs",
+  todayStr()
+);
 
 export default function Dashboard() {
   const [custodyDays, setCustodyDays] = useState([]);
