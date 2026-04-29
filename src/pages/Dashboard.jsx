@@ -23,15 +23,6 @@ const todayStr = () => {
   }).format(new Date());
 };
 
-console.log("📅 todayStr:", todayStr());
-console.log("🔥 Firebase data:", data);
-console.log(
-  "🔍 comparing:",
-  data.map((d) => d.date),
-  "vs",
-  todayStr()
-);
-
 export default function Dashboard() {
   const [custodyDays, setCustodyDays] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -47,17 +38,24 @@ export default function Dashboard() {
           ...doc.data(),
         }));
 
-        console.log("🔥 Firebase data:", data);
-
         setCustodyDays(data);
+      },
+
+      (error) => {
+        console.error("Firebase snapshot error:", error);
       }
     );
 
     return () => unsubscribe();
   }, []);
 
-  const todayCustody = custodyDays.find((d) => d.date === todayStr());
-  const isWithDad = todayCustody?.with_whom === "dad";
+  const todayKey = todayStr();
+
+  const todayCustody = custodyDays.find(
+    (d) => String(d.date).trim() === todayKey
+  );
+
+  const isWithDad = todayCustody?.with_whom?.trim().toLowerCase() === "dad";
   const isSplit = todayCustody?.is_split;
 
   const getParentForDay = (day) => {
@@ -74,7 +72,13 @@ export default function Dashboard() {
 
     for (let i = 1; i <= 45; i++) {
       const nextDate = addDays(today, i);
-      const nextKey = format(nextDate, "yyyy-MM-dd");
+      const nextKey = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Chicago",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(nextDate);
+
       const nextDay = custodyDays.find((d) => d.date === nextKey);
       const nextParent = getParentForDay(nextDay);
 
@@ -94,7 +98,13 @@ export default function Dashboard() {
 
   const nextSevenDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(new Date(), i);
-    const dateKey = format(date, "yyyy-MM-dd");
+    const dateKey = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Chicago",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+
     const custody = custodyDays.find((d) => d.date === dateKey);
     return { date, custody };
   });
@@ -203,7 +213,10 @@ export default function Dashboard() {
                 : "bg-white border-border";
 
             return (
-              <Link key={format(date, "yyyy-MM-dd")} to="/calendar">
+              <Link
+                key={`${format(date, "yyyy-MM-dd")}-${index}`}
+                to="/calendar"
+              >
                 <div
                   className={`rounded-3xl border p-4 text-center min-h-[96px] hover:shadow-md transition ${
                     index === 0 ? "ring-2 ring-primary" : ""
@@ -251,15 +264,6 @@ export default function Dashboard() {
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">Pending Tasks</p>
                 <p className="text-2xl font-bold">{tasks.length}</p>
-
-                <div className="space-y-1.5 mt-3">
-                  {tasks.slice(0, 3).map((task) => (
-                    <div key={task.id} className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <p className="text-sm truncate">{task.title}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </Card>
@@ -275,17 +279,6 @@ export default function Dashboard() {
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">Today's Meals</p>
                 <p className="text-2xl font-bold">{meals.length}</p>
-
-                <div className="space-y-1.5 mt-3">
-                  {meals.slice(0, 3).map((meal) => (
-                    <div key={meal.id} className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {meal.meal_type}
-                      </Badge>
-                      <p className="text-sm truncate">{meal.name}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </Card>
@@ -304,18 +297,6 @@ export default function Dashboard() {
               </div>
 
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-4">
-              {groceries.slice(0, 6).map((item) => (
-                <Badge key={item.id} variant="outline">
-                  {item.name}
-                </Badge>
-              ))}
-
-              {groceries.length > 6 && (
-                <Badge variant="secondary">+{groceries.length - 6} more</Badge>
-              )}
             </div>
           </Card>
         </Link>

@@ -21,6 +21,9 @@ import {
   CalendarDays,
   Heart,
 } from "lucide-react";
+import { collection, onSnapshot, doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import CustodyDayDialog from "@/components/calendar/CustodyDayDialog";
@@ -29,6 +32,14 @@ import GoogleCalendarSync from "@/components/calendar/GoogleCalendarSync";
 const DAD_SOLID = "bg-blue-500";
 const MOM_SOLID = "bg-amber-400";
 
+const houstonDateKey = (date = new Date()) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+
 export default function CustodyCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -36,36 +47,43 @@ export default function CustodyCalendar() {
   const [custodyDays, setCustodyDays] = useState([]);
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("custodyDays") || "[]");
-    setCustodyDays(data);
+    const unsubscribe = onSnapshot(
+      collection(db, "custodyDays"),
+      (snapshot) => {
+        const data = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+
+        setCustodyDays(data);
+      },
+      (error) => {
+        console.error("Firebase custodyDays error:", error);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
-  const saveCustodyDays = (updatedDays) => {
-    setCustodyDays(updatedDays);
-    localStorage.setItem("custodyDays", JSON.stringify(updatedDays));
-  };
+  const saveCustodyDay = async (payload) => {
+    try {
+      const cleanPayload = {
+        date: payload.date,
+        is_split: Boolean(payload.is_split),
+        with_whom: payload.is_split ? null : payload.with_whom,
+        morning: payload.is_split ? payload.morning : null,
+        afternoon: payload.is_split ? payload.afternoon : null,
+        notes: payload.notes || "",
+      };
 
-  const saveCustodyDay = (payload) => {
-    const existing = custodyDays.find((d) => d.date === payload.date);
+      await setDoc(doc(db, "custodyDays", payload.date), cleanPayload, {
+        merge: true,
+      });
 
-    let updated;
-
-    if (existing) {
-      updated = custodyDays.map((d) =>
-        d.date === payload.date ? { ...d, ...payload } : d
-      );
-    } else {
-      updated = [
-        ...custodyDays,
-        {
-          id: payload.date,
-          ...payload,
-        },
-      ];
+      setSelectedDate(null);
+    } catch (error) {
+      console.error("Error saving custody day:", error);
     }
-
-    saveCustodyDays(updated);
-    setSelectedDate(null);
   };
 
   const monthStart = startOfMonth(currentMonth);
@@ -80,10 +98,11 @@ export default function CustodyCalendar() {
     weeks.push(allDays.slice(i, i + 7));
   }
 
+  const startKey = format(calStart, "yyyy-MM-dd");
+  const endKey = format(calEnd, "yyyy-MM-dd");
+
   const visibleCustodyDays = custodyDays.filter(
-    (d) =>
-      d.date >= format(calStart, "yyyy-MM-dd") &&
-      d.date <= format(calEnd, "yyyy-MM-dd")
+    (d) => d.date >= startKey && d.date <= endKey
   );
 
   const custodyMap = {};
@@ -91,7 +110,7 @@ export default function CustodyCalendar() {
     custodyMap[d.date] = d;
   });
 
-  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const todayKey = houstonDateKey();
   const todayCustody = custodyMap[todayKey];
   const todayParent = todayCustody?.is_split ? null : todayCustody?.with_whom;
 
@@ -161,10 +180,20 @@ export default function CustodyCalendar() {
             HOY
           </p>
           <p className="font-bold text-base font-heading">
-            {format(new Date(), "EEEE, d 'de' MMMM")}
+            {new Intl.DateTimeFormat("es-US", {
+              timeZone: "America/Chicago",
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            }).format(new Date())}
           </p>
           <p className="text-sm text-muted-foreground">
-            {format(new Date(), "EEEE, MMMM d")}
+            {new Intl.DateTimeFormat("en-US", {
+              timeZone: "America/Chicago",
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            }).format(new Date())}
           </p>
 
           {todayCustody && (
@@ -510,13 +539,7 @@ export default function CustodyCalendar() {
           custodyDays={custodyDays}
           currentMonth={currentMonth}
           onClose={() => setShowSync(false)}
-          onImported={(updatedDays) => {
-            const data =
-              updatedDays ||
-              JSON.parse(localStorage.getItem("custodyDays") || "[]");
-            setCustodyDays(data);
-            setShowSync(false);
-          }}
+          onImported={() => setShowSync(false)}
         />
       )}
     </div>
