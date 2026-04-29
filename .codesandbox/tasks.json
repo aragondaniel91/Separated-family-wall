@@ -19,13 +19,14 @@
     },
     "build": {
       "name": "build",
-      "command": "pnpm build",
-      "runAtStart": false
+      "command": "pnpm build"
     },
     "preview": {
       "name": "preview",
       "command": "pnpm preview",
-      "runAtStart": false
+      "preview": {
+        "port": 4173
+      }
     },
     "install": {
       "name": "install dependencies",
