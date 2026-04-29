@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Link } from "react-router-dom";
 import { format, addDays } from "date-fns";
 import {
@@ -21,15 +23,18 @@ export default function Dashboard() {
   const [groceries, setGroceries] = useState([]);
 
   useEffect(() => {
-    const allCustody = JSON.parse(localStorage.getItem("custodyDays") || "[]");
-    const allTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
-    const allMeals = JSON.parse(localStorage.getItem("meals") || "[]");
-    const allGroceries = JSON.parse(localStorage.getItem("groceries") || "[]");
+    const unsubscribe = onSnapshot(
+      collection(db, "custodyDays"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCustodyDays(data);
+      }
+    );
 
-    setCustodyDays(allCustody);
-    setTasks(allTasks.filter((t) => t.status === "pending"));
-    setMeals(allMeals.filter((m) => m.date === todayStr()));
-    setGroceries(allGroceries.filter((g) => !g.checked));
+    return () => unsubscribe();
   }, []);
 
   const todayCustody = custodyDays.find((d) => d.date === todayStr());
