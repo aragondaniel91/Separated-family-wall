@@ -25,7 +25,7 @@
       "name": "preview",
       "command": "pnpm preview",
       "preview": {
-        "port": 4173
+        "port": 5173
       }
     },
     "install": {
